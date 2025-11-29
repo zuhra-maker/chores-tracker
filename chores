@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Chores Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .stats {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .room-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .room-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .room-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .room-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .room-title {
+            font-size: 1.5em;
+            color: #333;
+            flex-grow: 1;
+        }
+
+        .assigned-kid {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .room-progress {
+            font-size: 0.9em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .chore-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chore-item:hover {
+            background: #e9ecef;
+        }
+
+        .chore-item.completed {
+            background: #d4edda;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: white;
+        }
+
+        .chore-item.completed .checkbox {
+            background: #667eea;
+        }
+
+        .checkmark {
+            color: white;
+            font-weight: bold;
+            display: none;
+        }
+
+        .chore-item.completed .checkmark {
+            display: block;
+        }
+
+        .chore-text {
+            flex-grow: 1;
+            color: #333;
+        }
+
+        .reset-btn {
+            display: block;
+            margin: 30px auto;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+
+        .rotate-btn {
+            display: block;
+            margin: 10px auto;
+            padding: 15px 40px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .rotate-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+            background: #218838;
+        }
+
+        .celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .celebration.show {
+            display: block;
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .celebration h2 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .celebration p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏡 Kids Chores Tracker</h1>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="completedCount">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">Total Chores</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="percentComplete">0%</div>
+                <div class="stat-label">Progress</div>
+            </div>
+        </div>
+
+        <div class="rooms-grid" id="roomsGrid"></div>
+
+        <button class="rotate-btn" onclick="rotateKids()">🔄 Rotate Kids to Next Rooms</button>
+        <button class="reset-btn" onclick="resetAll()">Reset All Chores</button>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="celebration" id="celebration">
+        <h2>🎉 Amazing!</h2>
+        <p>All chores completed!</p>
+    </div>
+
+    <script>
+        const choresData = {
+            bedroom: {
+                name: "Bedrooms",
+                icon: "🛏️",
+                chores: [
+                    "Make your bed",
+                    "Put dirty clothes in hamper",
+                    "Put toys away",
+                    "Clear floor of items",
+                    "Dust shelves"
+                ]
+            },
+            bathroom: {
+                name: "Bathroom",
+                icon: "🚿",
+                chores: [
+                    "Hang up towels",
+                    "Put toiletries away",
+                    "Wipe sink",
+                    "Empty trash",
+                    "Check toilet paper"
+                ]
+            },
+            kitchen: {
+                name: "Kitchen",
+                icon: "🍽️",
+                chores: [
+                    "Clear the table",
+                    "Load dishwasher",
+                    "Wipe counters",
+                    "Sweep floor",
+                    "Take out trash"
+                ]
+            },
+            livingRoom: {
+                name: "Living Room",
+                icon: "🛋️",
+                chores: [
+                    "Fluff cushions",
+                    "Put away books/magazines",
+                    "Organize remote controls",
+                    "Vacuum carpet",
+                    "Dust TV stand"
+                ]
+            },
+            corridor: {
+                name: "Corridor",
+                icon: "🚪",
+                chores: [
+                    "Put shoes away",
+                    "Hang up coats",
+                    "Organize shoe rack",
+                    "Sweep/vacuum floor",
+                    "Tidy entrance area"
+                ]
+            },
+            garden: {
+                name: "Garden",
+                icon: "🌳",
+                chores: [
+                    "Water plants",
+                    "Pick up toys",
+                    "Sweep paths/patio",
+                    "Put away outdoor equipment",
+                    "Fill bird feeder",
+                    "Pick up litter",
+                    "Tidy flower beds"
+                ]
+            }
+
+        };
+
+        let completedChores = {};
+        const kids = ['M', 'A', 'U'];
+        let roomAssignments = {};
+
+        function loadProgress() {
+            const saved = localStorage.getItem('choresProgress');
+            if (saved) {
+                completedChores = JSON.parse(saved);
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem('choresProgress', JSON.stringify(completedChores));
+        }
+
+        function initializeAssignments() {
+            const saved = localStorage.getItem('roomAssignments');
+            if (saved) {
+                roomAssignments = JSON.parse(saved);
+            } else {
+                // Initial assignment
+                const roomKeys = Object.keys(choresData);
+                roomKeys.forEach((room, idx) => {
+                    roomAssignments[room] = kids[idx % kids.length];
+                });
+                saveAssignments();
+            }
+        }
+
+        function saveAssignments() {
+            localStorage.setItem('roomAssignments', JSON.stringify(roomAssignments));
+        }
+
+        function rotateKids() {
+            if (confirm('This will rotate kids to their next rooms and reset all chores. Continue?')) {
+                const roomKeys = Object.keys(choresData);
+                const newAssignments = {};
+                
+                // Rotate each kid to the next room
+                roomKeys.forEach((room, idx) => {
+                    const currentKid = roomAssignments[room];
+                    const currentKidIndex = kids.indexOf(currentKid);
+                    const nextKidIndex = (currentKidIndex + 1) % kids.length;
+                    newAssignments[room] = kids[nextKidIndex];
+                });
+                
+                roomAssignments = newAssignments;
+                saveAssignments();
+                
+                // Reset all chores
+                completedChores = {};
+                saveProgress();
+                
+                renderRooms();
+            }
+        }
+
+        function renderRooms() {
+            const grid = document.getElementById('roomsGrid');
+            grid.innerHTML = '';
+
+            Object.keys(choresData).forEach(roomKey => {
+                const room = choresData[roomKey];
+                const completed = room.chores.filter((_, idx) => 
+                    completedChores[`${roomKey}-${idx}`]
+                ).length;
+                const progress = `${completed}/${room.chores.length}`;
+
+                const roomCard = document.createElement('div');
+                roomCard.className = 'room-card';
+                roomCard.innerHTML = `
+                    <div class="room-header">
+                        <div class="room-icon">${room.icon}</div>
+                        <div class="room-title">${room.name}</div>
+                        <div class="assigned-kid">${roomAssignments[roomKey] || ''}</div>
+                        <div class="room-progress">${progress}</div>
+                    </div>
+                    <div class="chores-list">
+                        ${room.chores.map((chore, idx) => {
+                            const choreId = `${roomKey}-${idx}`;
+                            const isCompleted = completedChores[choreId] || false;
+                            return `
+                                <div class="chore-item ${isCompleted ? 'completed' : ''}" 
+                                     onclick="toggleChore('${choreId}')">
+                                    <div class="checkbox">
+                                        <span class="checkmark">✓</span>
+                                    </div>
+                                    <div class="chore-text">${chore}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                grid.appendChild(roomCard);
+            });
+
+            updateStats();
+        }
+
+        function toggleChore(choreId) {
+            completedChores[choreId] = !completedChores[choreId];
+            saveProgress();
+            renderRooms();
+            checkAllComplete();
+        }
+
+        function updateStats() {
+            let total = 0;
+            let completed = 0;
+
+            Object.keys(choresData).forEach(roomKey => {
+                const room = choresData[roomKey];
+                total += room.chores.length;
+                room.chores.forEach((_, idx) => {
+                    if (completedChores[`${roomKey}-${idx}`]) {
+                        completed++;
+                    }
+                });
+            });
+
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('percentComplete').textContent = 
+                total > 0 ? Math.round((completed / total) * 100) + '%' : '0%';
+        }
+
+        function checkAllComplete() {
+            let total = 0;
+            let completed = 0;
+
+            Object.keys(choresData).forEach(roomKey => {
+                const room = choresData[roomKey];
+                total += room.chores.length;
+                room.chores.forEach((_, idx) => {
+                    if (completedChores[`${roomKey}-${idx}`]) {
+                        completed++;
+                    }
+                });
+            });
+
+            if (total > 0 && completed === total) {
+                showCelebration();
+            }
+        }
+
+        function showCelebration() {
+            document.getElementById('overlay').classList.add('show');
+            document.getElementById('celebration').classList.add('show');
+            
+            setTimeout(() => {
+                document.getElementById('overlay').classList.remove('show');
+                document.getElementById('celebration').classList.remove('show');
+            }, 3000);
+        }
+
+        function resetAll() {
+            if (confirm('Are you sure you want to reset all chores?')) {
+                completedChores = {};
+                saveProgress();
+                renderRooms();
+            }
+        }
+
+        // Initialize
+        loadProgress();
+        initializeAssignments();
+        renderRooms();
+    </script>
+</body>
+</html>
