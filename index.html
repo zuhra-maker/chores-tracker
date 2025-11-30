@@ -222,6 +222,81 @@
             animation: popIn 0.3s ease-out;
         }
 
+        .activity-report {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            width: 600px;
+        }
+
+        .activity-report.show {
+            display: block;
+            animation: popIn 0.3s ease-out;
+        }
+
+        .activity-report h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .activity-report .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .activity-report .close-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .activity-day {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .activity-day h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .activity-kid {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .activity-kid strong {
+            color: #667eea;
+        }
+
+        .activity-kid ul {
+            margin: 5px 0 0 20px;
+            color: #666;
+        }
+
         @keyframes popIn {
             0% {
                 transform: translate(-50%, -50%) scale(0.8);
@@ -281,14 +356,20 @@
 
         <div class="rooms-grid" id="roomsGrid"></div>
 
-        <button class="rotate-btn" onclick="rotateKids()">🔄 Rotate Kids to Next Rooms</button>
+        <button class="rotate-btn" onclick="showActivityReport()">📊 View Last 7 Days Activity</button>
         <button class="reset-btn" onclick="resetAll()">Reset All Chores</button>
     </div>
 
-    <div class="overlay" id="overlay"></div>
+    <div class="overlay" id="overlay" onclick="closeActivityReport()"></div>
     <div class="celebration" id="celebration">
         <h2>🎉 Amazing!</h2>
         <p>All chores completed!</p>
+    </div>
+
+    <div class="activity-report" id="activityReport">
+        <button class="close-btn" onclick="closeActivityReport()">×</button>
+        <h2>📊 Last 7 Days Activity</h2>
+        <div id="activityContent"></div>
     </div>
 
     <script>
@@ -367,6 +448,7 @@
         let completedChores = {};
         const kids = ['M', 'A', 'U'];
         let roomAssignments = {};
+        let choreHistory = [];
 
         function loadProgress() {
             const saved = localStorage.getItem('choresProgress');
@@ -379,10 +461,56 @@
             localStorage.setItem('choresProgress', JSON.stringify(completedChores));
         }
 
+        function loadHistory() {
+            const saved = localStorage.getItem('choreHistory');
+            if (saved) {
+                choreHistory = JSON.parse(saved);
+            }
+        }
+
+        function saveHistory() {
+            localStorage.setItem('choreHistory', JSON.stringify(choreHistory));
+        }
+
+        function logChoreCompletion(choreId, isCompleted) {
+            if (isCompleted) {
+                const [roomKey, choreIdx] = choreId.split('-');
+                const room = choresData[roomKey];
+                const choreName = room.chores[parseInt(choreIdx)];
+                const assignedKid = roomAssignments[roomKey];
+                
+                choreHistory.push({
+                    kid: assignedKid,
+                    room: room.name,
+                    chore: choreName,
+                    timestamp: new Date().toISOString()
+                });
+                
+                saveHistory();
+            }
+        }
+
         function initializeAssignments() {
             const saved = localStorage.getItem('roomAssignments');
+            const lastRotation = localStorage.getItem('lastRotation');
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = Sunday
+            
             if (saved) {
                 roomAssignments = JSON.parse(saved);
+                
+                // Auto-rotate on Sunday if not rotated this week
+                if (dayOfWeek === 0 && lastRotation) {
+                    const lastRotationDate = new Date(lastRotation);
+                    const daysSinceRotation = Math.floor((today - lastRotationDate) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysSinceRotation >= 7) {
+                        autoRotateKids();
+                    }
+                } else if (!lastRotation) {
+                    // First time setup
+                    localStorage.setItem('lastRotation', today.toISOString());
+                }
             } else {
                 // Initial assignment
                 const roomKeys = Object.keys(choresData);
@@ -390,6 +518,7 @@
                     roomAssignments[room] = kids[idx % kids.length];
                 });
                 saveAssignments();
+                localStorage.setItem('lastRotation', today.toISOString());
             }
         }
 
@@ -397,28 +526,85 @@
             localStorage.setItem('roomAssignments', JSON.stringify(roomAssignments));
         }
 
-        function rotateKids() {
-            if (confirm('This will rotate kids to their next rooms and reset all chores. Continue?')) {
-                const roomKeys = Object.keys(choresData);
-                const newAssignments = {};
-                
-                // Rotate each kid to the next room
-                roomKeys.forEach((room, idx) => {
-                    const currentKid = roomAssignments[room];
-                    const currentKidIndex = kids.indexOf(currentKid);
-                    const nextKidIndex = (currentKidIndex + 1) % kids.length;
-                    newAssignments[room] = kids[nextKidIndex];
+        function autoRotateKids() {
+            const roomKeys = Object.keys(choresData);
+            const newAssignments = {};
+            
+            roomKeys.forEach((room) => {
+                const currentKid = roomAssignments[room];
+                const currentKidIndex = kids.indexOf(currentKid);
+                const nextKidIndex = (currentKidIndex + 1) % kids.length;
+                newAssignments[room] = kids[nextKidIndex];
+            });
+            
+            roomAssignments = newAssignments;
+            saveAssignments();
+            localStorage.setItem('lastRotation', new Date().toISOString());
+            
+            // Reset all chores on rotation
+            completedChores = {};
+            saveProgress();
+        }
+
+        function showActivityReport() {
+            loadHistory();
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            // Filter history to last 7 days
+            const recentHistory = choreHistory.filter(entry => {
+                const entryDate = new Date(entry.timestamp);
+                return entryDate >= sevenDaysAgo;
+            });
+            
+            // Group by date
+            const byDate = {};
+            recentHistory.forEach(entry => {
+                const date = new Date(entry.timestamp).toLocaleDateString();
+                if (!byDate[date]) {
+                    byDate[date] = {};
+                }
+                if (!byDate[date][entry.kid]) {
+                    byDate[date][entry.kid] = [];
+                }
+                byDate[date][entry.kid].push(`${entry.room}: ${entry.chore}`);
+            });
+            
+            // Generate HTML
+            let html = '';
+            const dates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
+            
+            if (dates.length === 0) {
+                html = '<p style="text-align: center; color: #666;">No activity recorded in the last 7 days.</p>';
+            } else {
+                dates.forEach(date => {
+                    html += `<div class="activity-day">`;
+                    html += `<h3>${date}</h3>`;
+                    
+                    kids.forEach(kid => {
+                        if (byDate[date][kid]) {
+                            html += `<div class="activity-kid">`;
+                            html += `<strong>${kid}</strong> completed:`;
+                            html += `<ul>`;
+                            byDate[date][kid].forEach(chore => {
+                                html += `<li>${chore}</li>`;
+                            });
+                            html += `</ul></div>`;
+                        }
+                    });
+                    
+                    html += `</div>`;
                 });
-                
-                roomAssignments = newAssignments;
-                saveAssignments();
-                
-                // Reset all chores
-                completedChores = {};
-                saveProgress();
-                
-                renderRooms();
             }
+            
+            document.getElementById('activityContent').innerHTML = html;
+            document.getElementById('overlay').classList.add('show');
+            document.getElementById('activityReport').classList.add('show');
+        }
+
+        function closeActivityReport() {
+            document.getElementById('overlay').classList.remove('show');
+            document.getElementById('activityReport').classList.remove('show');
         }
 
         function renderRooms() {
@@ -465,6 +651,7 @@
 
         function toggleChore(choreId) {
             completedChores[choreId] = !completedChores[choreId];
+            logChoreCompletion(choreId, completedChores[choreId]);
             saveProgress();
             renderRooms();
             checkAllComplete();
@@ -529,6 +716,7 @@
 
         // Initialize
         loadProgress();
+        loadHistory();
         initializeAssignments();
         renderRooms();
     </script>
